@@ -10,12 +10,12 @@ type GameBoard = Matrix Char
 
 data GameState = Game GameBoard Score
 
+-- Auxiliar functions
+
 getLetter :: Int -> Char
 getLetter i
     | i == 0 = 'S'
     | otherwise = 'O'
-
--- TODO Function to get free spaces
 
 freeRowPositions :: [Char] -> Int -> [Int]
 freeRowPositions [] _ = []
@@ -24,21 +24,41 @@ freeRowPositions (x:xs) n
     | otherwise = rest
     where rest = freeRowPositions xs (n+1)
 
-
 freePositions :: [[Char]] -> Int -> [(Int,Int)]
 freePositions [] _ = []
 freePositions (x:xs) n = (Prelude.concatMap (\y -> [(n, y)]) (freeRowPositions x 1)) ++ (freePositions xs $ n+1)
 
-randomDecision :: GameBoard -> IO Move
-randomDecision mat = do
+printScore :: Score -> IO ()
+printScore sc = putStr "Score: " >> putStrLn (show sc)
+
+-- Decisional functions
+
+randomDecision :: GameBoard -> Score -> IO Move
+randomDecision mat _ = do
     i <- getStdRandom (randomR (0::Int,1))
     let l = getLetter i
-    --r <- getStdRandom (randomR (1, nrows mat))
-    --c <- getStdRandom (randomR (1, ncols mat))
     let poss = freePositions (toLists mat) 1
     el <- getStdRandom (randomR (0, (length poss) - 1))
     let (r,c) = poss !! el
     return (r, c, l)
+
+userDecision :: GameBoard -> Score -> IO Move
+userDecision mat sc = do
+    putStrLn $ prettyMatrix mat
+    printScore sc
+    putStrLn "Please, enter the row: "
+    s <- getLine
+    let r = (read s)::Int
+    putStrLn "Please, enter the column: "
+    s <- getLine
+    let c = (read s)::Int
+    putStrLn "Please, enter the letter: "
+    s <- getChar
+    getLine
+    let l = s::Char
+    return (r,c,l)
+
+-- Game checking functions
 
 check :: GameBoard -> Char -> (Int, Int) -> (Int, Int) -> Int
 check mat 'O' pos@(r,c) (mx,my)
@@ -60,7 +80,7 @@ check mat 'S' pos@(r, c) mov@(mx, my)
         p@(pr, pc) = (r + mx, c + my)
 
 doScore :: Move -> GameBoard -> Int
-doScore (r, c, l) mat = (check mat l mov (0,1)) + (check mat l mov (1,0)) + (check mat l mov (1,1))
+doScore (r, c, l) mat = (check mat l mov (0,1)) + (check mat l mov (1,0)) + (check mat l mov (1,1)) + (check mat l mov (-1,1))
     where mov = (r,c)
 
 isFull :: GameBoard -> Bool
@@ -71,9 +91,11 @@ increaseScore (p1,p2) score player
     | player == 0 = (p1 + score, p2)
     | otherwise = (p1, p2 + score)
 
-play :: GameState -> [(GameBoard -> IO Move)] -> Int -> IO GameState
+-- Play functions
+
+play :: GameState -> [(GameBoard -> Score -> IO Move)] -> Int -> IO GameState
 play sc@(Game mat score) players player = do
-    dec@(r,c,e) <- ((players !! player) $ mat)
+    dec@(r,c,e) <- ((players !! player) mat score)
     let mat2 = setElem e (r,c) mat
     let sc = doScore dec mat2
     let newScore = increaseScore score sc player
@@ -84,18 +106,19 @@ play sc@(Game mat score) players player = do
     else
         play (Game (setElem e (r,c) mat2) newScore) players player
 
--- | The main entry point.
 main :: IO ()
 main = do
-    putStrLn "Please, introduce the number of rows: "
+    putStrLn "Please, enter the number of rows: "
     s <- getLine
     let r = (read s)::Int
-    putStrLn "Please, introduce the number of columns: "
+    putStrLn "Please, enter the number of columns: "
     s <- getLine
     let c = (read s)::Int
     let mat = matrix r c (\_ -> '_')
     print mat
-    --(Game res score) <- randomMode (Game mat (0,0)) 0
-    (Game res score) <- play (Game mat (0,0)) [randomDecision,randomDecision] 0
+    putStrLn "Please, select the game mode:\n1. Human vs Machine\n2. Machine vs Machine (Simulation)"
+    s <- getLine
+    let mode = (read s)::Int
+    (Game res score) <- play (Game mat (0,0)) [userDecision,randomDecision] 0
     print res
-    print score
+    printScore score
