@@ -42,6 +42,8 @@ randomDecision mat _ = do
     let (r,c) = poss !! el
     return (r, c, l)
 
+-- TODO: Another IA decision system
+
 userDecision :: GameBoard -> Score -> IO Move
 userDecision mat sc = do
     putStrLn $ prettyMatrix mat
@@ -119,6 +121,7 @@ main = do
     putStrLn "Please, select the game mode:\n1. Human vs Machine\n2. Machine vs Machine (Simulation)"
     s <- getLine
     let mode = (read s)::Int
-    (Game res score) <- play (Game mat (0,0)) [userDecision,randomDecision] 0
+    let game = if mode == 1 then userDecision else randomDecision
+    (Game res score) <- play (Game mat (0,0)) [game,randomDecision] 0
     print res
     printScore score
