@@ -10,4 +10,4 @@ A simple SOS (https://en.wikipedia.org/wiki/SOS_(game)) game implementation in H
 If I have time in the future here's a list of changes I'd like to introduce (among others)
 - Player vs Player mode.
 - Show the game table each time the Machine makes a movement.
-- Better IA.
+- Better AI.
